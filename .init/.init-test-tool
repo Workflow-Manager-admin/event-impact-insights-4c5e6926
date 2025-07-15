@@ -1,0 +1,4 @@
+{
+    "command": "pytest",
+    "working_directory": "/home/kavia/workspace/code-generation/event-impact-insights-4c5e6926/backend_api"
+}
