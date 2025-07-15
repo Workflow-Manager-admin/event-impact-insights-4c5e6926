@@ -57,9 +57,15 @@ app = FastAPI(
     ]
 )
 
+# Restrict CORS in development to the React frontend. For production, change to your deployed frontend domain.
+ALLOWED_ORIGINS = [
+    "http://localhost:3000",
+    "http://127.0.0.1:3000"
+]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Should be restricted in production!
+    allow_origins=ALLOWED_ORIGINS,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
