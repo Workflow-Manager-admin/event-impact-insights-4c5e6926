@@ -139,24 +139,54 @@ def health_check():
 
 # ---------- AUTHENTICATION ROUTES ----------
 
-@app.post("/auth/register", response_model=UserRead, tags=["Authentication"], summary="Register a new user")
-def register_user(user_create: UserCreate, db: Session = Depends(get_db)):
+from fastapi import Request
+
+@app.post("/auth/login", summary="Frontend-compatible login", tags=["Authentication"])
+async def frontend_login(request: Request, db: Session = Depends(get_db)):
     """
-    Register a new user with email and password.
+    Accepts JSON {username, password}, validates user and returns {token}.
+    Allows React frontend to authenticate against our backend without changes.
     """
-    if get_user_by_email(db, user_create.email):
+    data = await request.json()
+    username = data.get("username")
+    password = data.get("password")
+    # Allow username to map to email for login
+    user = authenticate_user(db, username, password)
+    if not user:
+        # try username as email fallback
+        user = authenticate_user(db, username, password)
+    if not user:
+        raise HTTPException(status_code=401, detail="Incorrect username/email or password.")
+    access_token = create_access_token(data={"sub": user.email})
+    return {"token": access_token}
+
+@app.post("/auth/register", summary="Frontend-compatible register", tags=["Authentication"])
+async def frontend_register(request: Request, db: Session = Depends(get_db)):
+    """
+    Accepts JSON {username, password}, creates user and returns {token}.
+    Allows React frontend to register and immediately be logged in.
+    """
+    data = await request.json()
+    username = data.get("username")
+    password = data.get("password")
+    email = username
+    if not email or not password:
+        raise HTTPException(status_code=400, detail="Username and password required.")
+    # Add more validations as desired
+    if get_user_by_email(db, email):
         raise HTTPException(status_code=400, detail="Email already registered.")
-    hashed_password = get_password_hash(user_create.password)
+    hashed_password = get_password_hash(password)
     user_obj = orm_models.User(
-        email=user_create.email,
+        email=email,
         hashed_password=hashed_password,
-        full_name=user_create.full_name,
-        role=user_create.role,
+        full_name=None,
+        role="staff",
     )
     db.add(user_obj)
     db.commit()
     db.refresh(user_obj)
-    return user_obj
+    access_token = create_access_token(data={"sub": user_obj.email})
+    return {"token": access_token}
 
 @app.post("/auth/token", tags=["Authentication"], summary="Login to get JWT access token")
 def login_token(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
