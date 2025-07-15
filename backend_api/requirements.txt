@@ -45,3 +45,7 @@ websockets==15.0.1
 # Database dependencies
 SQLAlchemy>=2.0
 psycopg2-binary>=2.9
+
+# Password hashing and JWT
+passlib[bcrypt]>=1.7.4
+python-jose[cryptography]>=3.3.0
